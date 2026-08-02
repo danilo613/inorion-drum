@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#05060a">
+<title>Inorion DRUM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Noto+Serif+JP:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#05060a;
+    --bg-1:#0c0f18;
+    --gold:#c9a24c;
+    --gold-bright:#f2d488;
+    --teal:#3fa79d;
+    --ink:#efe7d6;
+    --ink-dim:#a89e88;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{
+    background-color:#05060a;
+    height:100%;
+  }
+  html,body{
+    margin:0; padding:0; width:100%;
+    min-height:100%;
+    background-color:#05060a;
+    background-image:
+      radial-gradient(ellipse at 50% 18%, rgba(63,167,157,0.10), transparent 45%),
+      radial-gradient(ellipse at 50% 100%, rgba(201,162,76,0.08), transparent 55%);
+    color:var(--ink);
+    font-family:"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    overflow-x:hidden;
+  }
+  .stars{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    transform:translateZ(0);
+    will-change:transform;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.35), transparent),
+      radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.25), transparent),
+      radial-gradient(1.5px 1.5px at 85% 60%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.2), transparent),
+      radial-gradient(1px 1px at 10% 65%, rgba(255,255,255,0.25), transparent),
+      radial-gradient(1.5px 1.5px at 60% 45%, rgba(255,255,255,0.18), transparent);
+    background-size: 100% 100%;
+    opacity:0.6;
+  }
+  .wrap{
+    position:relative; z-index:1;
+    max-width:520px; margin:0 auto;
+    padding:38px 20px 56px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .eyebrow{
+    font-family:"Cormorant Garamond", serif;
+    letter-spacing:0.42em;
+    font-size:11px;
+    color:var(--teal);
+    text-transform:uppercase;
+    margin-bottom:10px;
+    opacity:0.85;
+  }
+  h1{
+    font-family:"Cormorant Garamond", serif;
+    font-weight:500;
+    font-size:34px;
+    letter-spacing:0.04em;
+    margin:0 0 4px;
+    color:var(--gold-bright);
+    text-align:center;
+  }
+  .unlock-title{
+    font-family:"Cormorant Garamond", serif;
+    font-weight:500;
+    font-size:34px;
+    letter-spacing:0.04em;
+    color:var(--gold-bright);
+    text-align:center;
+    margin-bottom:6px;
+  }
+  .sub{
+    font-size:13px;
+    color:var(--ink-dim);
+    letter-spacing:0.06em;
+    margin-bottom:34px;
+    text-align:center;
+  }
+
+  .disc-stage{
+    position:relative;
+    width:min(88vw, 400px);
+    aspect-ratio:1/1;
+    margin-bottom:8px;
+  }
+  .halo{
+    position:absolute; inset:-14%;
+    border-radius:50%;
+    background: radial-gradient(circle, rgba(242,212,136,0.16) 0%, rgba(242,212,136,0.05) 40%, transparent 70%);
+    animation: breathe 6s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes breathe{
+    0%,100%{ transform:scale(1); opacity:0.75; }
+    50%{ transform:scale(1.06); opacity:1; }
+  }
+  .ring-sweep{
+    position:absolute; inset:-4%;
+    border-radius:50%;
+    border:1px solid rgba(201,162,76,0.18);
+    pointer-events:none;
+  }
+  .ring-sweep::before{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:50%;
+    border-top:1px solid rgba(242,212,136,0.55);
+    animation:spin 18s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .spin-wrap{
+    position:absolute; inset:0;
+    transition:transform 0.7s cubic-bezier(0.3,0,0.15,1);
+    will-change:transform;
+  }
+  .disc{
+    position:absolute; inset:0;
+    border-radius:50%;
+    background-image:url("/images/disc.jpg");
+    background-size:cover;
+    background-position:center;
+    box-shadow:
+      0 0 60px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(242,212,136,0.12) inset;
+  }
+
+  .zone{
+    position:absolute;
+    width:19%;
+    aspect-ratio:1/1;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    border:none;
+    background:transparent;
+    cursor:pointer;
+    transition:transform 0.08s ease;
+  }
+  .zone.center{ width:22%; }
+  .zone:active{ transform:translate(-50%,-50%) scale(0.94); }
+
+  .ripple{
+    position:absolute; border-radius:50%;
+    pointer-events:none;
+    left:0; top:0;
+    transform:translate(-50%,-50%);
+    border:2.2px solid var(--rc, rgba(242,212,136,0.7));
+    box-shadow:0 0 28px 4px var(--rc, rgba(242,212,136,0.5)), 0 0 55px 10px var(--rc, rgba(242,212,136,0.25));
+    filter:blur(1.4px);
+    animation:rippleOut 1.4s cubic-bezier(0.16,0.6,0.3,1) forwards;
+    mix-blend-mode:screen;
+  }
+  @keyframes rippleOut{
+    0%{ width:2%; height:2%; opacity:0.95; }
+    70%{ opacity:0.35; }
+    100%{ width:75%; height:75%; opacity:0; }
+  }
+  .flash{
+    position:absolute; border-radius:50%;
+    pointer-events:none;
+    left:0; top:0;
+    transform:translate(-50%,-50%);
+    width:14%; height:14%;
+    background:radial-gradient(circle, var(--fc, rgba(255,255,255,0.9)) 0%, transparent 72%);
+    mix-blend-mode:screen;
+    animation:flashOut 0.5s ease-out forwards;
+  }
+  @keyframes flashOut{
+    0%{ opacity:1; transform:translate(-50%,-50%) scale(0.6); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(1.6); }
+  }
+
+  .panel{
+    width:100%;
+    margin-top:22px;
+    border-top:1px solid rgba(201,162,76,0.2);
+    padding-top:16px;
+  }
+  .panel-title{
+    font-family:"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    letter-spacing:0.3em;
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-bottom:12px;
+    text-align:center;
+  }
+  .control{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:13px;
+  }
+  .control-name{
+    flex:0 0 auto;
+    width:132px;
+    white-space:nowrap;
+    font-size:12px;
+    color:var(--ink);
+    letter-spacing:0.01em;
+    line-height:1.3;
+  }
+  .control .slider-wrap{
+    position:relative;
+    flex:1 1 auto;
+    min-width:0;
+    height:22px;
+    display:flex;
+    align-items:center;
+  }
+  .slider-track-bg{
+    position:absolute;
+    left:0; right:0; top:50%;
+    transform:translateY(-50%);
+    height:7px;
+    border-radius:4px;
+    background-image:linear-gradient(to right, #2e2109 0%, #5c451a 22%, #8c6b2c 48%, #c9a24c 74%, #ecd08e 100%);
+    box-shadow:
+      inset 0 2px 4px rgba(0,0,0,0.65),
+      inset 0 -1px 0 rgba(255,255,255,0.06);
+    pointer-events:none;
+  }
+  .slider-mask{
+    position:absolute;
+    right:0; top:50%;
+    transform:translateY(-50%);
+    height:7px;
+    border-radius:4px;
+    background:rgba(20,16,8,0.94);
+    pointer-events:none;
+  }
+  .control .slider-wrap input[type=range]{
+    position:relative;
+    width:100%;
+    background:transparent;
+    box-shadow:none;
+  }
+  .control .val{
+    flex:0 0 auto;
+    width:44px;
+    text-align:right;
+    color:var(--gold-bright);
+    font-variant-numeric:tabular-nums;
+    font-size:12px;
+    text-shadow:0 0 4px rgba(242,212,136,0.35);
+  }
+
+  input[type=range]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:7px;
+    border-radius:4px;
+    background:
+      linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.15) 40%, rgba(255,255,255,0.03)),
+      linear-gradient(to right, #2e2109 0%, #5c451a 22%, #8c6b2c 48%, #c9a24c 74%, #ecd08e var(--fill, 50%), rgba(255,255,255,0.05) var(--fill, 50%), rgba(255,255,255,0.05) 100%);
+    outline:none;
+    box-shadow:
+      inset 0 2px 4px rgba(0,0,0,0.65),
+      inset 0 -1px 0 rgba(255,255,255,0.06),
+      0 1px 0 rgba(255,255,255,0.03);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:18px; height:18px;
+    border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, #d9bd7c 0%, #b0894a 32%, #8a6a30 62%, #55401a 100%);
+    box-shadow:
+      0 2px 5px rgba(0,0,0,0.75),
+      0 0 0 1px rgba(0,0,0,0.5),
+      0 0 6px rgba(201,162,76,0.3),
+      inset 0 1px 1px rgba(255,240,210,0.35);
+    cursor:pointer;
+    margin-top:-6px;
+    border:none;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px; height:18px; border:none; border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, #d9bd7c 0%, #b0894a 32%, #8a6a30 62%, #55401a 100%);
+    box-shadow:
+      0 2px 5px rgba(0,0,0,0.75),
+      0 0 0 1px rgba(0,0,0,0.5),
+      0 0 6px rgba(201,162,76,0.3),
+      inset 0 1px 1px rgba(255,240,210,0.35);
+    cursor:pointer;
+  }
+  input[type=range]::-moz-range-track{
+    height:7px; border-radius:4px;
+    background:rgba(255,255,255,0.05);
+    box-shadow:inset 0 2px 4px rgba(0,0,0,0.65);
+  }
+  input[type=range]::-moz-range-progress{
+    height:7px; border-radius:4px;
+    background:linear-gradient(to right, #2e2109, #5c451a 22%, #8c6b2c 48%, #c9a24c 74%, #ecd08e);
+  }
+
+  .hint{
+    margin-top:30px;
+    font-size:11.5px;
+    color:var(--ink-dim);
+    text-align:center;
+    letter-spacing:0.04em;
+    line-height:1.9;
+    opacity:0.8;
+  }
+  .unlock{
+    position:fixed; inset:0; z-index:5;
+    display:flex; align-items:center; justify-content:center;
+    background-color:#05060a;
+    flex-direction:column;
+    gap:16px;
+  }
+  .unlock button{
+    font-family:"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size:16px; letter-spacing:0.15em;
+    background:transparent;
+    border:1px solid rgba(242,212,136,0.5);
+    color:var(--gold-bright);
+    padding:14px 38px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .unlock p{
+    font-size:12px; color:var(--ink-dim); letter-spacing:0.05em;
+  }
+  .hidden{ display:none !important; }
+  .calibBtn{
+    font-family:"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size:12px;
+    letter-spacing:0.04em;
+    background:transparent;
+    border:1px solid rgba(201,162,76,0.4);
+    color:var(--ink);
+    padding:9px 16px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .calibBtn:active{ transform:scale(0.96); }
+  .pin{
+    position:absolute;
+    width:10px; height:10px;
+    margin-left:-5px; margin-top:-5px;
+    border-radius:50%;
+    background:var(--gold-bright);
+    box-shadow:0 0 8px rgba(242,212,136,0.9), 0 0 0 2px rgba(0,0,0,0.5);
+    pointer-events:none;
+    z-index:3;
+  }
+  .pin-label{
+    position:absolute;
+    transform:translate(6px, -6px);
+    font-size:10px;
+    color:var(--gold-bright);
+    background:rgba(5,6,10,0.7);
+    padding:1px 5px;
+    border-radius:4px;
+    white-space:nowrap;
+    pointer-events:none;
+    z-index:3;
+  }
+  .disc-stage.calibrating .disc{ cursor:crosshair; }
+  .disc-stage.calibrating .zone{ pointer-events:none; opacity:0.15; }
+
+  .scaleSwitch{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom:26px;
+  }
+  .scaleBtn{
+    font-family:"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size:12.5px;
+    letter-spacing:0.05em;
+    background:transparent;
+    border:1px solid rgba(201,162,76,0.3);
+    color:var(--ink-dim);
+    padding:7px 15px;
+    border-radius:999px;
+    cursor:pointer;
+    line-height:1.3;
+  }
+  .scaleBtn .en{ display:block; font-size:9.5px; opacity:0.75; letter-spacing:0.08em; font-family:"Cormorant Garamond", serif; }
+  .scaleBtn.active{
+    border-color:rgba(242,212,136,0.75);
+    color:var(--gold-bright);
+    background:rgba(201,162,76,0.14);
+  }
+  .scaleBtn:disabled{
+    opacity:0.35;
+    cursor:default;
+  }
+
+  .rotateRow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    margin-bottom:22px;
+  }
+  .rotBtn{
+    width:38px; height:38px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(242,212,136,0.12), rgba(0,0,0,0.2));
+    border:1px solid rgba(201,162,76,0.4);
+    color:var(--gold-bright);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    box-shadow:0 0 0 0 rgba(242,212,136,0.0);
+    transition:box-shadow 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+  }
+  .rotBtn:hover{
+    border-color:rgba(242,212,136,0.75);
+    box-shadow:0 0 14px rgba(242,212,136,0.35);
+  }
+  .rotBtn:active{
+    transform:scale(0.9) rotate(20deg);
+  }
+
+  .langToggle{
+    position:fixed;
+    top:16px; right:16px;
+    z-index:6;
+    display:flex;
+    border:1px solid rgba(201,162,76,0.4);
+    border-radius:999px;
+    overflow:hidden;
+    font-family:"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size:12px;
+    letter-spacing:0.08em;
+  }
+  .langToggle button{
+    background:transparent;
+    border:none;
+    color:var(--ink-dim);
+    padding:6px 13px;
+    cursor:pointer;
+  }
+  .langToggle button.active{
+    background:rgba(201,162,76,0.22);
+    color:var(--gold-bright);
+  }
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<div class="langToggle" id="langToggle">
+  <button data-lang="ja" class="active">日</button>
+  <button data-lang="en">EN</button>
+</div>
+
+<div class="unlock" id="unlock">
+  <div class="unlock-title">Inorion DRUM</div>
+  <button id="unlockBtn" data-i18n="unlockBtn">タップして音を鳴らす</button>
+  <p data-i18n="unlockSub">Tap to begin</p>
+</div>
+
+<div class="wrap">
+  <h1>Inorion DRUM</h1>
+  <div class="sub" data-i18n="sub">打面に触れて、祈りの音を鳴らす</div>
+
+  <div class="scaleSwitch" id="scaleSwitch"></div>
+
+  <div class="rotateRow">
+    <button id="rotPrev" class="rotBtn" aria-label="rotate left">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 1 3 6.7"/>
+        <polyline points="3 8 3 12 7 12"/>
+      </svg>
+    </button>
+    <button id="rotNext" class="rotBtn" aria-label="rotate right">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 0-3 6.7"/>
+        <polyline points="21 8 21 12 17 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="disc-stage">
+    <div class="halo"></div>
+    <div class="ring-sweep"></div>
+    <div class="spin-wrap" id="spinWrap">
+      <div class="disc" id="disc"></div>
+      <!-- zones injected by JS -->
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" data-i18n="panelResonance">響き</div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="reverbLabel">残響</span>
+      <input type="range" id="reverbSlider" min="0" max="100" value="35">
+      <span class="val" id="reverbVal">35%</span>
+    </div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="delayLabel">こだま</span>
+      <input type="range" id="delaySlider" min="0" max="100" value="20">
+      <span class="val" id="delayVal">20%</span>
+    </div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="volLabel">音量</span>
+      <input type="range" id="volSlider" min="0" max="100" value="80">
+      <span class="val" id="volVal">80%</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" data-i18n="panelFX">エフェクト</div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="bitcrushLabel">ビットクラッシャー</span>
+      <input type="range" id="bitcrushSlider" min="0" max="100" value="0">
+      <span class="val" id="bitcrushVal">0%</span>
+    </div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="chorusLabel">コーラス</span>
+      <input type="range" id="chorusSlider" min="0" max="100" value="0">
+      <span class="val" id="chorusVal">0%</span>
+    </div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="flangerLabel">フランジャー</span>
+      <input type="range" id="flangerSlider" min="0" max="100" value="0">
+      <span class="val" id="flangerVal">0%</span>
+    </div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="tremoloLabel">トレモロ</span>
+      <input type="range" id="tremoloSlider" min="0" max="100" value="0">
+      <span class="val" id="tremoloVal">0%</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" data-i18n="panelEQ">音色</div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="lowLabel">低音</span>
+      <input type="range" id="eqLowSlider" min="-12" max="12" value="0">
+      <span class="val" id="eqLowVal">0 dB</span>
+    </div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="midLabel">中音</span>
+      <input type="range" id="eqMidSlider" min="-12" max="12" value="0">
+      <span class="val" id="eqMidVal">0 dB</span>
+    </div>
+
+    <div class="control">
+      <span class="control-name" data-i18n="highLabel">高音</span>
+      <input type="range" id="eqHighSlider" min="-12" max="12" value="0">
+      <span class="val" id="eqHighVal">0 dB</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" data-i18n="panelRipple">波紋</div>
+    <div class="control">
+      <span class="control-name" data-i18n="intensityLabel">濃度</span>
+      <input type="range" id="rippleSlider" min="0" max="100" value="70">
+      <span class="val" id="rippleVal">70%</span>
+    </div>
+    <div class="control" style="margin-bottom:0;">
+      <span class="control-name" data-i18n="vibrationLabel">振動（対応端末のみ）</span>
+      <button id="vibToggle" class="calibBtn" style="padding:5px 14px; margin-left:auto;" data-i18n="vibOn">ON</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" data-i18n="panelCalib">打面キャリブレーション</div>
+    <div class="hint hidden" id="calibInstruction" style="margin-top:0;">
+      <span data-i18n="calibInstructionText">「調整モードを開始」を押してから、写真の実際の打面を<br>下記の順番でタップしてください:</span><br>
+      <b id="calibNext" style="color:var(--gold-bright);">orange（上）</b>
+    </div>
+    <div style="display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap;">
+      <button id="calibToggle" class="calibBtn" data-i18n="calibStart">調整モードを開始</button>
+      <button id="calibReset" class="calibBtn" data-i18n="calibReset">リセット</button>
+      <button id="calibCopy" class="calibBtn" data-i18n="calibCopy">座標をコピー</button>
+    </div>
+    <pre id="calibOutput" style="margin-top:16px; font-size:11px; color:var(--ink-dim); white-space:pre-wrap; word-break:break-all; font-family:monospace; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; min-height:20px;"></pre>
+  </div>
+</div>
+
+<script>
+// 来訪ログ(国別カウント)。失敗しても本体の体験には影響させない。
+fetch('/api/log-visit', { method: 'POST' }).catch(() => {});
+// ---- reference colors ----
+const COLOR_HEX = {
+  yellow:"#F5E642", red:"#E83020", purple:"#8844CC", green:"#1A8A40",
+  brown:"#C4A882", cyan:"#00BFEF", orange:"#F07020", pink:"#F020B0", lime:"#8CC830",
+};
+const RIPPLE_GOLD = "#f2d488";
+let rippleIntensity = 0.7;
+function hexToRgba(hex, a){
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ---- physical tap positions (percent, relative to .disc-stage) ----
+// Calibrated against the photo. Index order is clockwise from the top:
+// 0=top, 1=upper-right, 2=right, 3=lower-right, 4=bottom,
+// 5=lower-left, 6=left, 7=upper-left. Center (pink) never rotates.
+const PHYSICAL_POSITIONS = [
+  { x: 50.0, y: 23.0 }, // 0 top
+  { x: 69.1, y: 30.9 }, // 1 upper-right
+  { x: 77.0, y: 50.0 }, // 2 right
+  { x: 69.1, y: 69.1 }, // 3 lower-right
+  { x: 50.0, y: 77.0 }, // 4 bottom
+  { x: 30.9, y: 69.1 }, // 5 lower-left
+  { x: 23.0, y: 50.0 }, // 6 left
+  { x: 30.9, y: 30.9 }, // 7 upper-left
+];
+const CENTER_POS = { x: 50.0, y: 50.0 }; // pink, fixed
+
+// static color assigned to each physical index (matches the photo's
+// natural/calibrated orientation). This never changes — instead, the
+// whole disc (image + tap zones) physically spins together, so the
+// picture and the tap targets never fall out of alignment.
+const STATIC_COLOR_ORDER = ["orange","lime","red","brown","cyan","yellow","purple","green"];
+let rotation = 0; // 0-7, steps of 45°
+
+function topColorForRotation(){
+  const idx = ((-rotation % 8) + 8) % 8;
+  return STATIC_COLOR_ORDER[idx];
+}
+
+// ---- sound scale (音階) definitions ----
+const SCALES = {
+  arcane:  { ja: "響ノ音", en: "Hibiki no NE", enabled: true },
+  equinox: { ja: "光ノ音", en: "Hikari no NE", enabled: true },
+  enigma:  { ja: "秘ノ音", en: "Hi no NE",     enabled: true },
+  tonus:   { ja: "風ノ音", en: "Kaze no NE",   enabled: true },
+};
+let currentScale = 'arcane';
+
+// per-scale volume compensation (equinox source files are quieter)
+const SCALE_GAIN = { arcane: 1.0, equinox: 3.0, enigma: 1.0, tonus: 1.0 };
+
+const SCALE_COLOR_KEYS = ["yellow","red","purple","green","brown","cyan","orange","pink","lime"];
+
+async function loadScale(scale){
+  if (buffers[scale]) return; // already loaded or loading
+  buffers[scale] = {};
+  await Promise.all(SCALE_COLOR_KEYS.map(async (color) => {
+    const res = await fetch(`/sounds/${scale}/${color}.mp3`);
+    const arr = await res.arrayBuffer();
+    const buf = await ctx.decodeAudioData(arr);
+    buffers[scale][color] = buf;
+  }));
+}
+
+let ctx = null;
+let buffers = {}; // buffers[scale][color] = AudioBuffer
+let masterGain, dryGain, reverbGain, delayGain, convolver, delayNode, delayFeedback, limiter;
+let eqLow, eqMid, eqHigh;
+let bitcrusher;
+let chorusDelay, chorusLFO, chorusLFODepth, chorusWetGain, chorusOut;
+let flangerDelay, flangerLFO, flangerLFODepth, flangerFeedback, flangerWetGain, flangerOut;
+let tremoloGain, tremoloLFO, tremoloLFODepth;
+
+function setBitcrushAmount(amount){
+  // amount: 0 (transparent/clean) - 1 (heavily crushed).
+  // exponential curve: steps goes from ~32768 (inaudible) down to 4 (heavily crushed)
+  const steps = Math.max(4, Math.round(32768 * Math.pow(2, -amount * 13)));
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < 1024; i++){
+    const x = (i / 1023) * 2 - 1;
+    curve[i] = Math.round(x * steps) / steps;
+  }
+  if (bitcrusher) bitcrusher.curve = curve;
+}
+
+function buildZones(){
+  const wrap = document.getElementById('spinWrap');
+  wrap.querySelectorAll('.zone').forEach(z => z.remove());
+
+  PHYSICAL_POSITIONS.forEach((pos, i) => {
+    const color = STATIC_COLOR_ORDER[i];
+    const zone = document.createElement('div');
+    zone.className = 'zone';
+    zone.style.left = pos.x + '%';
+    zone.style.top = pos.y + '%';
+    zone.dataset.color = color;
+    wrap.appendChild(zone);
+    bindZone(zone, color);
+  });
+
+  const center = document.createElement('div');
+  center.className = 'zone center';
+  center.style.left = CENTER_POS.x + '%';
+  center.style.top = CENTER_POS.y + '%';
+  center.dataset.color = 'pink';
+  wrap.appendChild(center);
+  bindZone(center, 'pink');
+
+  updateRotationDisplay();
+}
+
+function bindZone(el, color){
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    playColor(color, el, e.pressure);
+  });
+}
+
+function base64ToArrayBuffer(b64){
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function makeImpulseResponse(ctxRef, duration=2.6, decay=2.0){
+  const rate = ctxRef.sampleRate;
+  const length = rate * duration;
+  const preDelaySamples = Math.floor(rate * 0.02); // 20ms pre-delay for a sense of space
+  const impulse = ctxRef.createBuffer(2, length, rate);
+  for (let ch=0; ch<2; ch++){
+    const data = impulse.getChannelData(ch);
+    for (let i=0; i<length; i++){
+      if (i < preDelaySamples){
+        data[i] = 0;
+        continue;
+      }
+      const t = (i - preDelaySamples) / (length - preDelaySamples);
+      data[i] = (Math.random()*2-1) * Math.pow(1 - t, decay);
+    }
+  }
+  return impulse;
+}
+
+async function initAudio(){
+  if (ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+  masterGain = ctx.createGain();
+  masterGain.gain.value = 0.8;
+  limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -10;
+  limiter.knee.value = 4;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0.002;
+  limiter.release.value = 0.18;
+  masterGain.connect(limiter);
+  limiter.connect(ctx.destination);
+
+  eqLow = ctx.createBiquadFilter();
+  eqLow.type = 'lowshelf';
+  eqLow.frequency.value = 200;
+  eqLow.gain.value = 0;
+
+  eqMid = ctx.createBiquadFilter();
+  eqMid.type = 'peaking';
+  eqMid.frequency.value = 1200;
+  eqMid.Q.value = 0.8;
+  eqMid.gain.value = 0;
+
+  eqHigh = ctx.createBiquadFilter();
+  eqHigh.type = 'highshelf';
+  eqHigh.frequency.value = 3200;
+  eqHigh.gain.value = 0;
+
+  eqLow.connect(eqMid);
+  eqMid.connect(eqHigh);
+
+  // ---- FX chain: bitcrusher -> chorus -> flanger -> tremolo ----
+
+  // bitcrusher (waveshaper-based quantizer; amount 0-1 controls step resolution)
+  bitcrusher = ctx.createWaveShaper();
+  setBitcrushAmount(0);
+  eqHigh.connect(bitcrusher);
+
+  // chorus (modulated short delay, mixed with dry)
+  chorusDelay = ctx.createDelay(0.05);
+  chorusDelay.delayTime.value = 0.018;
+  chorusLFO = ctx.createOscillator();
+  chorusLFO.frequency.value = 0.9;
+  chorusLFODepth = ctx.createGain();
+  chorusLFODepth.gain.value = 0.004;
+  chorusLFO.connect(chorusLFODepth);
+  chorusLFODepth.connect(chorusDelay.delayTime);
+  chorusLFO.start();
+  chorusWetGain = ctx.createGain();
+  chorusWetGain.gain.value = 0;
+  chorusOut = ctx.createGain();
+  bitcrusher.connect(chorusOut); // dry pass-through
+  bitcrusher.connect(chorusDelay);
+  chorusDelay.connect(chorusWetGain);
+  chorusWetGain.connect(chorusOut);
+
+  // flanger (short modulated delay with feedback, mixed with dry)
+  flangerDelay = ctx.createDelay(0.02);
+  flangerDelay.delayTime.value = 0.004;
+  flangerLFO = ctx.createOscillator();
+  flangerLFO.frequency.value = 0.22;
+  flangerLFODepth = ctx.createGain();
+  flangerLFODepth.gain.value = 0.0028;
+  flangerLFO.connect(flangerLFODepth);
+  flangerLFODepth.connect(flangerDelay.delayTime);
+  flangerLFO.start();
+  flangerFeedback = ctx.createGain();
+  flangerFeedback.gain.value = 0.4;
+  flangerDelay.connect(flangerFeedback);
+  flangerFeedback.connect(flangerDelay);
+  flangerWetGain = ctx.createGain();
+  flangerWetGain.gain.value = 0;
+  flangerOut = ctx.createGain();
+  chorusOut.connect(flangerOut); // dry pass-through
+  chorusOut.connect(flangerDelay);
+  flangerDelay.connect(flangerWetGain);
+  flangerWetGain.connect(flangerOut);
+
+  // tremolo (amplitude modulation in series)
+  tremoloGain = ctx.createGain();
+  tremoloGain.gain.value = 1.0;
+  tremoloLFO = ctx.createOscillator();
+  tremoloLFO.frequency.value = 5.5;
+  tremoloLFODepth = ctx.createGain();
+  tremoloLFODepth.gain.value = 0;
+  tremoloLFO.connect(tremoloLFODepth);
+  tremoloLFODepth.connect(tremoloGain.gain);
+  tremoloLFO.start();
+  flangerOut.connect(tremoloGain);
+
+  const fxOut = tremoloGain;
+
+  dryGain = ctx.createGain();
+  dryGain.gain.value = 1.0;
+  fxOut.connect(dryGain);
+  dryGain.connect(masterGain);
+
+  convolver = ctx.createConvolver();
+  convolver.buffer = makeImpulseResponse(ctx);
+  reverbGain = ctx.createGain();
+  reverbGain.gain.value = 0.35;
+  fxOut.connect(convolver);
+  convolver.connect(reverbGain);
+  reverbGain.connect(masterGain);
+
+  delayNode = ctx.createDelay(2.0);
+  delayNode.delayTime.value = 0.55;
+  delayFeedback = ctx.createGain();
+  delayFeedback.gain.value = 0.32;
+  delayGain = ctx.createGain();
+  delayGain.gain.value = 0.2;
+  fxOut.connect(delayNode);
+  delayNode.connect(delayFeedback);
+  delayFeedback.connect(delayNode);
+  delayNode.connect(delayGain);
+  delayGain.connect(masterGain);
+
+  // load only the currently selected scale (others load lazily on switch)
+  await loadScale(currentScale);
+}
+
+const RIPPLE_POOL_SIZE = 10;
+let ripplePool = [];
+let flashPool = [];
+let rippleIdx = 0;
+let flashIdx = 0;
+
+function initEffectPools(){
+  const stage = document.getElementById('spinWrap');
+  for (let i = 0; i < RIPPLE_POOL_SIZE; i++){
+    const r = document.createElement('div');
+    r.className = 'ripple';
+    r.style.animation = 'none';
+    r.style.opacity = '0';
+    stage.appendChild(r);
+    ripplePool.push(r);
+
+    const f = document.createElement('div');
+    f.className = 'flash';
+    f.style.animation = 'none';
+    f.style.opacity = '0';
+    stage.appendChild(f);
+    flashPool.push(f);
+  }
+}
+
+function restartAnimation(el){
+  el.style.animation = 'none';
+  el.offsetWidth; // force reflow so the browser registers the reset before re-enabling
+  el.style.animation = '';
+}
+
+function triggerRippleAt(leftStyle, topStyle, velocity){
+  const v = velocity || 1.0;
+  const rc = hexToRgba(RIPPLE_GOLD, 0.75 * rippleIntensity * Math.min(1.3, v));
+  const fc = hexToRgba(RIPPLE_GOLD, 0.95 * rippleIntensity * Math.min(1.3, v));
+
+  const flash = flashPool[flashIdx];
+  flashIdx = (flashIdx + 1) % RIPPLE_POOL_SIZE;
+  flash.style.left = leftStyle;
+  flash.style.top = topStyle;
+  flash.style.setProperty('--fc', fc);
+  restartAnimation(flash);
+
+  const rip = ripplePool[rippleIdx];
+  rippleIdx = (rippleIdx + 1) % RIPPLE_POOL_SIZE;
+  rip.style.left = leftStyle;
+  rip.style.top = topStyle;
+  rip.style.setProperty('--rc', rc);
+  restartAnimation(rip);
+}
+
+function velocityGainFromPressure(p){
+  // most touchscreens report 0 or a flat 0.5 for plain finger taps (no real
+  // pressure sensor); only stylus/force-capable devices report meaningful
+  // variation. Treat missing/flat values as neutral so normal taps sound
+  // exactly as before, while capable devices get real dynamics.
+  if (!p || isNaN(p) || p === 0.5) return 1.0;
+  const clamped = Math.max(0.15, Math.min(1, p));
+  return 0.55 + clamped * 0.9; // roughly 0.68 - 1.45
+}
+
+function playColor(color, el, pressure){
+  if (!ctx || !buffers[currentScale] || !buffers[currentScale][color]) return;
+
+  if (navigator.vibrate && vibrationEnabled){
+    try { navigator.vibrate(color === 'pink' ? 18 : 12); } catch(e) {}
+  }
+
+  const velocity = velocityGainFromPressure(pressure);
+
+  const src = ctx.createBufferSource();
+  src.buffer = buffers[currentScale][color];
+  const scaleGain = ctx.createGain();
+  scaleGain.gain.value = (SCALE_GAIN[currentScale] || 1.0) * velocity;
+  src.connect(scaleGain);
+  scaleGain.connect(eqLow);
+  src.start(0);
+
+  triggerRippleAt(el.style.left, el.style.top, velocity);
+}
+
+document.getElementById('reverbSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('reverbVal').textContent = v + '%';
+  if (reverbGain) reverbGain.gain.value = v/100 * 0.9;
+});
+document.getElementById('delaySlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('delayVal').textContent = v + '%';
+  if (delayGain) delayGain.gain.value = v/100 * 0.6;
+});
+document.getElementById('volSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('volVal').textContent = v + '%';
+  if (masterGain) masterGain.gain.value = v/100;
+});
+
+document.getElementById('eqLowSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('eqLowVal').textContent = (v>0?'+':'') + v + ' dB';
+  if (eqLow) eqLow.gain.value = v;
+});
+document.getElementById('eqMidSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('eqMidVal').textContent = (v>0?'+':'') + v + ' dB';
+  if (eqMid) eqMid.gain.value = v;
+});
+document.getElementById('eqHighSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('eqHighVal').textContent = (v>0?'+':'') + v + ' dB';
+  if (eqHigh) eqHigh.gain.value = v;
+});
+
+document.getElementById('bitcrushSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('bitcrushVal').textContent = v + '%';
+  setBitcrushAmount(v/100);
+});
+document.getElementById('chorusSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('chorusVal').textContent = v + '%';
+  if (chorusWetGain) chorusWetGain.gain.value = (v/100) * 0.9;
+});
+document.getElementById('flangerSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('flangerVal').textContent = v + '%';
+  if (flangerWetGain) flangerWetGain.gain.value = (v/100) * 0.9;
+});
+document.getElementById('tremoloSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('tremoloVal').textContent = v + '%';
+  if (tremoloLFODepth) tremoloLFODepth.gain.value = (v/100) * 0.7;
+});
+let vibrationEnabled = true;
+document.getElementById('vibToggle').addEventListener('click', (e) => {
+  vibrationEnabled = !vibrationEnabled;
+  e.target.textContent = TEXTS[vibrationEnabled ? 'vibOn' : 'vibOff'][currentLang];
+  e.target.dataset.i18n = vibrationEnabled ? 'vibOn' : 'vibOff';
+  e.target.style.opacity = vibrationEnabled ? '1' : '0.5';
+});
+
+document.getElementById('rippleSlider').addEventListener('input', (e)=>{
+  const v = e.target.value;
+  document.getElementById('rippleVal').textContent = v + '%';
+  rippleIntensity = v/100;
+});
+
+// ---- i18n ----
+let currentLang = 'ja';
+const TEXTS = {
+  sub: { ja: "打面に触れて、祈りの音を鳴らす", en: "Touch the tone fields, awaken the resonance" },
+  unlockBtn: { ja: "タップして音を鳴らす", en: "Tap to begin" },
+  unlockSub: { ja: "Tap to begin", en: "祈りの音、鳴らす" },
+  panelResonance: { ja: "響き", en: "Resonance" },
+  reverbLabel: { ja: "残響", en: "Reverb" },
+  delayLabel: { ja: "こだま", en: "Echo" },
+  volLabel: { ja: "音量", en: "Volume" },
+  panelEQ: { ja: "音色", en: "EQ" },
+  lowLabel: { ja: "低音", en: "Low" },
+  midLabel: { ja: "中音", en: "Mid" },
+  highLabel: { ja: "高音", en: "High" },
+  panelFX: { ja: "エフェクト", en: "FX" },
+  bitcrushLabel: { ja: "ビットクラッシャー", en: "Bitcrush" },
+  chorusLabel: { ja: "コーラス", en: "Chorus" },
+  flangerLabel: { ja: "フランジャー", en: "Flanger" },
+  tremoloLabel: { ja: "トレモロ", en: "Tremolo" },
+  panelRipple: { ja: "波紋", en: "Ripple" },
+  intensityLabel: { ja: "濃度", en: "Intensity" },
+  vibrationLabel: { ja: "振動（対応端末のみ）", en: "Vibration (supported devices only)" },
+  vibOn: { ja: "ON", en: "ON" },
+  vibOff: { ja: "OFF", en: "OFF" },
+  hintMain: {
+    ja: "中央は基音（pink）。周囲8つの打面をタップすると、<br>それぞれ異なる音階が響きます。",
+    en: "The center is the root tone (pink). Tap the eight<br>surrounding tone fields to play different pitches."
+  },
+  panelCalib: { ja: "打面キャリブレーション", en: "Tone Field Calibration" },
+  calibStart: { ja: "調整モードを開始", en: "Start Calibration" },
+  calibEnd: { ja: "調整モードを終了", en: "End Calibration" },
+  calibReset: { ja: "リセット", en: "Reset" },
+  calibCopy: { ja: "座標をコピー", en: "Copy Coordinates" },
+  calibInstructionText: {
+    ja: "「調整モードを開始」を押してから、写真の実際の打面を<br>下記の順番でタップしてください:",
+    en: "Press \"Start Calibration\", then tap the actual tone fields<br>on the photo in the following order:"
+  },
+};
+const HTML_KEYS = ['hintMain', 'calibInstructionText'];
+
+function applyLang(lang){
+  currentLang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const entry = TEXTS[key];
+    if (!entry) return;
+    if (HTML_KEYS.includes(key)){
+      el.innerHTML = entry[lang];
+    } else {
+      el.textContent = entry[lang];
+    }
+  });
+  document.querySelectorAll('.langToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  updateCalibUI();
+}
+
+document.querySelectorAll('.langToggle button').forEach(btn => {
+  btn.addEventListener('click', () => applyLang(btn.dataset.lang));
+});
+
+function buildScaleSwitch(){
+  const wrap = document.getElementById('scaleSwitch');
+  wrap.innerHTML = '';
+  Object.entries(SCALES).forEach(([key, meta]) => {
+    const btn = document.createElement('button');
+    btn.className = 'scaleBtn' + (key === currentScale ? ' active' : '');
+    btn.disabled = !meta.enabled;
+    btn.innerHTML = `${meta.ja}<span class="en">${meta.en}</span>`;
+    if (meta.enabled){
+      btn.addEventListener('click', () => {
+        currentScale = key;
+        document.querySelectorAll('.scaleBtn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (ctx) loadScale(key); // fire-and-forget; playColor no-ops until loaded
+      });
+    }
+    wrap.appendChild(btn);
+  });
+}
+function updateRotationDisplay(){
+  const wrap = document.getElementById('spinWrap');
+  if (wrap) wrap.style.transform = `rotate(${rotation * 45}deg)`;
+}
+
+document.getElementById('rotPrev').addEventListener('click', () => {
+  rotation -= 1;
+  updateRotationDisplay();
+});
+document.getElementById('rotNext').addEventListener('click', () => {
+  rotation += 1;
+  updateRotationDisplay();
+});
+
+function wrapSliders(){
+  document.querySelectorAll('.control input[type=range]').forEach(input => {
+    const wrap = document.createElement('div');
+    wrap.className = 'slider-wrap';
+    input.parentNode.insertBefore(wrap, input);
+
+    const trackBg = document.createElement('div');
+    trackBg.className = 'slider-track-bg';
+    wrap.appendChild(trackBg);
+
+    const mask = document.createElement('div');
+    mask.className = 'slider-mask';
+    wrap.appendChild(mask);
+
+    wrap.appendChild(input);
+    input._maskEl = mask;
+  });
+}
+
+function setSliderFill(el){
+  const min = parseFloat(el.min) || 0;
+  const max = parseFloat(el.max) || 100;
+  const val = parseFloat(el.value);
+  const pct = ((val - min) / (max - min)) * 100;
+  if (el._maskEl){
+    el._maskEl.style.left = pct + '%';
+  }
+}
+wrapSliders();
+document.querySelectorAll('input[type=range]').forEach(el => {
+  setSliderFill(el);
+  el.addEventListener('input', () => setSliderFill(el));
+});
+
+buildScaleSwitch();
+
+buildZones();
+initEffectPools();
+
+document.getElementById('unlockBtn').addEventListener('click', async () => {
+  await initAudio();
+  document.getElementById('unlock').classList.add('hidden');
+});
+
+// ---- calibration mode ----
+const CALIB_POS_JA = ["上","右上","右","右下","下","左下","左","左上","中央（基音）"];
+const CALIB_POS_EN = ["top","upper-right","right","lower-right","bottom","lower-left","left","upper-left","center (root)"];
+function calibSequence(){
+  return currentLang === 'en' ? CALIB_POS_EN : CALIB_POS_JA;
+}
+let calibrating = false;
+let calibResults = [];
+
+const calibToggle = document.getElementById('calibToggle');
+const calibReset = document.getElementById('calibReset');
+const calibCopy = document.getElementById('calibCopy');
+const calibOutput = document.getElementById('calibOutput');
+const calibNext = document.getElementById('calibNext');
+const calibInstruction = document.getElementById('calibInstruction');
+const discStage = document.querySelector('.disc-stage');
+
+function updateCalibUI(){
+  const seq = calibSequence();
+  if (calibrating && calibResults.length < seq.length){
+    calibInstruction.classList.remove('hidden');
+    calibNext.textContent = seq[calibResults.length];
+  } else {
+    calibInstruction.classList.add('hidden');
+  }
+}
+
+function renderOutput(){
+  const posLabels = ["pos0_top","pos1_upperRight","pos2_right","pos3_lowerRight","pos4_bottom","pos5_lowerLeft","pos6_left","pos7_upperLeft","center"];
+  const lines = calibResults.map((p, i) => `  ${posLabels[i]}: { x: ${p.x.toFixed(1)}, y: ${p.y.toFixed(1)} }`);
+  calibOutput.textContent = calibResults.length ? "{\n" + lines.join(",\n") + "\n}" : "";
+}
+
+calibToggle.addEventListener('click', () => {
+  calibrating = !calibrating;
+  if (calibrating){
+    rotation = 0;
+    updateRotationDisplay();
+  }
+  discStage.classList.toggle('calibrating', calibrating);
+  calibToggle.textContent = TEXTS[calibrating ? 'calibEnd' : 'calibStart'][currentLang];
+  updateCalibUI();
+});
+
+calibReset.addEventListener('click', () => {
+  calibResults = [];
+  document.querySelectorAll('.pin, .pin-label').forEach(el => el.remove());
+  renderOutput();
+  updateCalibUI();
+});
+
+calibCopy.addEventListener('click', () => {
+  if (!calibOutput.textContent) return;
+  navigator.clipboard?.writeText(calibOutput.textContent).catch(()=>{});
+  calibCopy.textContent = currentLang === 'en' ? 'Copied' : 'コピーしました';
+  setTimeout(()=> calibCopy.textContent = TEXTS.calibCopy[currentLang], 1200);
+});
+
+discStage.addEventListener('pointerdown', (e) => {
+  if (!calibrating) return;
+  if (calibResults.length >= 9) return;
+  const rect = discStage.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width * 100;
+  const y = (e.clientY - rect.top) / rect.height * 100;
+  calibResults.push({x, y});
+
+  const pin = document.createElement('div');
+  pin.className = 'pin';
+  pin.style.left = x + '%';
+  pin.style.top = y + '%';
+  discStage.appendChild(pin);
+
+  const label = document.createElement('div');
+  label.className = 'pin-label';
+  label.style.left = x + '%';
+  label.style.top = y + '%';
+  label.textContent = calibResults.length;
+  discStage.appendChild(label);
+
+  renderOutput();
+  updateCalibUI();
+
+  if (calibResults.length >= 9){
+    calibrating = false;
+    discStage.classList.remove('calibrating');
+    calibToggle.textContent = TEXTS.calibStart[currentLang];
+  }
+});
+</script>
+</body>
+</html>
