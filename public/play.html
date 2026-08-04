@@ -610,6 +610,8 @@
     justify-content:center;
     gap:22px;
     margin-bottom:22px;
+    position:relative;
+    z-index:5;
   }
   .rotBtn{
     width:38px; height:38px;
@@ -622,6 +624,9 @@
     box-shadow:0 0 0 0 rgba(242,212,136,0.0);
     transition:box-shadow 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
     touch-action:manipulation;
+    position:relative;
+    z-index:1;
+    pointer-events:auto;
   }
   .rotBtn:hover{
     border-color:rgba(242,212,136,0.75);
@@ -679,7 +684,7 @@
   <div class="aboutBox">
     <button class="aboutToggle" id="aboutToggle" data-i18n="aboutToggle">Inorion DRUMとは？</button>
     <div class="aboutBody hidden" id="aboutBody">
-      <p data-i18n="aboutText">日本のGUDAdrum第一人者のDANiLOが開発した<br>バーチャルのスリットドラム。<br>誰でも気軽に、癒しの音色が楽しめるツール。<br><a href="https://www.gudadrumjapan.com/" target="_blank" rel="noopener">https://www.gudadrumjapan.com/</a><br><br>生で演奏を堪能するなら、2026年10月17日日本の神戸で特別公演があります↓<br><a href="https://www.gudadrumjapan.com/1inorion" target="_blank" rel="noopener">https://www.gudadrumjapan.com/1inorion</a><br><br>DANiLO instagram：<a href="https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr" target="_blank" rel="noopener">@danilo.sacredjapan</a></p>
+      <p data-i18n="aboutText">日本のGUDAdrum第一人者のDANiLOが開発した<br>バーチャルのスリットドラム。<br>誰でも気軽に、癒しの音色が楽しめるツール。<br><a href="https://www.gudadrumjapan.com/" target="_blank" rel="noopener">https://www.gudadrumjapan.com/</a><br><br>生で演奏を堪能するなら、2026年10月17日日本の神戸で特別公演があります↓<br><a href="https://www.gudadrumjapan.com/1inorion" target="_blank" rel="noopener">https://www.gudadrumjapan.com/1inorion</a><br><br>DANiLO instagram：<a href="https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr" target="_blank" rel="noopener">@danilo.sacredjapan</a><br>DANiLO TikTok：<a href="https://www.tiktok.com/@sacredsound.japan?_r=1&_t=ZS-98akeyB4qk3" target="_blank" rel="noopener">@sacredsound.japan</a><br><br>Email：<a href="mailto:danilo@starseeds.me">danilo@starseeds.me</a></p>
     </div>
   </div>
 
@@ -1545,8 +1550,8 @@ const TEXTS = {
   subNote: { ja: "イヤフォン、ヘッドフォン推奨", en: "Headphones recommended" },
   aboutToggle: { ja: "Inorion DRUMとは？", en: "What is Inorion DRUM?" },
   aboutText: {
-    ja: "日本のGUDAdrum第一人者のDANiLOが開発した<br>バーチャルのスリットドラム。<br>誰でも気軽に、癒しの音色が楽しめるツール。<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>生で演奏を堪能するなら、2026年10月17日日本の神戸で特別公演があります↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br><br>DANiLO instagram：<a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a>",
-    en: "A virtual slit drum created by DANiLO,<br>Japan's leading GUDAdrum artist.<br>A tool for anyone to enjoy its healing tones.<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>To experience it live, a special concert takes place in Kobe, Japan on October 17, 2026 ↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br><br>DANiLO Instagram: <a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a>"
+    ja: "日本のGUDAdrum第一人者のDANiLOが開発した<br>バーチャルのスリットドラム。<br>誰でも気軽に、癒しの音色が楽しめるツール。<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>生で演奏を堪能するなら、2026年10月17日日本の神戸で特別公演があります↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br><br>DANiLO instagram：<a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a><br>DANiLO TikTok：<a href=\"https://www.tiktok.com/@sacredsound.japan?_r=1&_t=ZS-98akeyB4qk3\" target=\"_blank\" rel=\"noopener\">@sacredsound.japan</a><br><br>Email：<a href=\"mailto:danilo@starseeds.me\">danilo@starseeds.me</a>",
+    en: "A virtual slit drum created by DANiLO,<br>Japan's leading GUDAdrum artist.<br>A tool for anyone to enjoy its healing tones.<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>To experience it live, a special concert takes place in Kobe, Japan on October 17, 2026 ↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br><br>DANiLO Instagram: <a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a><br>DANiLO TikTok: <a href=\"https://www.tiktok.com/@sacredsound.japan?_r=1&_t=ZS-98akeyB4qk3\" target=\"_blank\" rel=\"noopener\">@sacredsound.japan</a><br><br>Email: <a href=\"mailto:danilo@starseeds.me\">danilo@starseeds.me</a>"
   },
   noteLabelToggle: { ja: "打面にスケールを表示", en: "Show notes on the drum" },
   unlockBtn: { ja: "タップして音を鳴らす", en: "Tap to begin" },
@@ -1636,22 +1641,9 @@ function updateRotationDisplay(){
 }
 
 function bindRotButton(el, delta){
-  let handledByPointer = false;
-  function apply(){
+  el.addEventListener('click', () => {
     rotation += delta;
     updateRotationDisplay();
-  }
-  el.addEventListener('pointerdown', (e) => {
-    handledByPointer = true;
-    if (e.cancelable) e.preventDefault();
-    apply();
-  });
-  el.addEventListener('click', (e) => {
-    if (handledByPointer){
-      handledByPointer = false;
-      return;
-    }
-    apply();
   });
 }
 bindRotButton(document.getElementById('rotPrev'), -1);
