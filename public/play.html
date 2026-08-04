@@ -1408,13 +1408,19 @@ function setActiveBgm(key){
   ['forest','ocean'].forEach(k => startBgmSource(k));
 
   const now = ctx.currentTime;
+  const FADE_SECONDS = 4;
+  const FLOOR = 0.0001; // exponentialRamp can't target exactly 0
   ['forest','ocean'].forEach(k => {
     const g = BGM_GAINS[k];
     if (!g) return;
     const target = (k === key) ? bgmVolume : 0;
     g.gain.cancelScheduledValues(now);
-    g.gain.setValueAtTime(g.gain.value, now);
-    g.gain.linearRampToValueAtTime(target, now + 1.6);
+    g.gain.setValueAtTime(Math.max(g.gain.value, FLOOR), now);
+    g.gain.exponentialRampToValueAtTime(Math.max(target, FLOOR), now + FADE_SECONDS);
+    if (target <= 0){
+      // exponential ramp can only approach zero; snap silent once the fade completes
+      g.gain.setValueAtTime(0, now + FADE_SECONDS + 0.05);
+    }
   });
   activeBgm = key;
   updateBgmToggleUI();
@@ -1630,17 +1636,11 @@ function updateRotationDisplay(){
 }
 
 function bindRotButton(el, delta){
-  let lastFire = 0;
-  function fire(e){
-    const now = Date.now();
-    if (now - lastFire < 250) return; // ignore duplicate pointerdown+click firing
-    lastFire = now;
+  el.addEventListener('pointerdown', (e) => {
     if (e.cancelable) e.preventDefault();
     rotation += delta;
     updateRotationDisplay();
-  }
-  el.addEventListener('pointerdown', fire);
-  el.addEventListener('click', fire);
+  });
 }
 bindRotButton(document.getElementById('rotPrev'), -1);
 bindRotButton(document.getElementById('rotNext'), 1);
