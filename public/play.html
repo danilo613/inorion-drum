@@ -90,10 +90,10 @@
   }
   .subNote{
     font-size:11px;
-    color:var(--teal);
+    color:var(--gold-bright);
     letter-spacing:0.05em;
     text-align:center;
-    opacity:0.85;
+    opacity:0.8;
     margin-bottom:18px;
   }
 
@@ -1636,10 +1636,22 @@ function updateRotationDisplay(){
 }
 
 function bindRotButton(el, delta){
-  el.addEventListener('pointerdown', (e) => {
-    if (e.cancelable) e.preventDefault();
+  let handledByPointer = false;
+  function apply(){
     rotation += delta;
     updateRotationDisplay();
+  }
+  el.addEventListener('pointerdown', (e) => {
+    handledByPointer = true;
+    if (e.cancelable) e.preventDefault();
+    apply();
+  });
+  el.addEventListener('click', (e) => {
+    if (handledByPointer){
+      handledByPointer = false;
+      return;
+    }
+    apply();
   });
 }
 bindRotButton(document.getElementById('rotPrev'), -1);
