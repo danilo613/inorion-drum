@@ -837,7 +837,23 @@
 
 <script>
 // 来訪ログ(国別カウント)。失敗しても本体の体験には影響させない。
-fetch('/api/log-visit', { method: 'POST' }).catch(() => {});
+// 自分の端末を集計から除外したい場合: ?owner=1 を付けたURLで一度だけアクセスすると、
+// この端末のブラウザに除外フラグが保存され、以後この端末からの訪問はカウントされない。
+(function(){
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get('owner') === '1'){
+      localStorage.setItem('inorion_exclude_visit', '1');
+    }
+    const excluded = localStorage.getItem('inorion_exclude_visit') === '1';
+    if (!excluded){
+      fetch('/api/log-visit', { method: 'POST' }).catch(() => {});
+    }
+  } catch (e) {
+    // localStorage unavailable (private mode etc.) — log normally
+    fetch('/api/log-visit', { method: 'POST' }).catch(() => {});
+  }
+})();
 // ---- reference colors ----
 const COLOR_HEX = {
   yellow:"#F5E642", red:"#E83020", purple:"#8844CC", green:"#1A8A40",
