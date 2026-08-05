@@ -435,6 +435,13 @@
   .unlock p{
     font-size:12px; color:var(--ink-dim); letter-spacing:0.05em;
   }
+  .silentModeNote{
+    font-size:11px;
+    color:var(--gold-bright);
+    opacity:0.7;
+    letter-spacing:0.04em;
+    margin-top:14px;
+  }
   .hidden{ display:none !important; }
   .calibBtn{
     font-family:"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
@@ -656,6 +663,7 @@
   <img src="/images/logo.jpg" alt="Inorion DRUM" class="unlock-title">
   <button id="unlockBtn" data-i18n="unlockBtn">タップして音を鳴らす</button>
   <p data-i18n="unlockSub">Tap to begin</p>
+  <p class="silentModeNote" data-i18n="silentModeNote">※マナーモードの場合、音が鳴りません</p>
 </div>
 
 <div class="wrap">
@@ -1556,6 +1564,7 @@ const TEXTS = {
   noteLabelToggle: { ja: "打面にスケールを表示", en: "Show notes on the drum" },
   unlockBtn: { ja: "タップして音を鳴らす", en: "Tap to begin" },
   unlockSub: { ja: "Tap to begin", en: "祈りの音、鳴らす" },
+  silentModeNote: { ja: "※マナーモードの場合、音が鳴りません", en: "※Please turn off silent mode to hear sound" },
   panelResonance: { ja: "響き", en: "Resonance" },
   reverbLabel: { ja: "残響", en: "Reverb" },
   delayLabel: { ja: "こだま", en: "Echo" },
