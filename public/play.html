@@ -1058,6 +1058,9 @@ let activeBgm = null; // 'forest' | 'ocean' | null
 async function initAudio(){
   if (ctx) return;
   ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended'){
+    try { await ctx.resume(); } catch (e) {}
+  }
 
   masterGain = ctx.createGain();
   masterGain.gain.value = 0.5;
@@ -1344,6 +1347,7 @@ function velocityGainFromPressure(p){
 
 function playColor(color, el, pressure){
   if (!ctx || !buffers[currentScale] || !buffers[currentScale][color]) return;
+  if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
 
   if (navigator.vibrate && vibrationEnabled){
     try { navigator.vibrate(color === 'pink' ? 18 : 12); } catch(e) {}
@@ -1366,6 +1370,7 @@ function playColor(color, el, pressure){
 
 function playAttack(pressure){
   if (!ctx || !attackBuffer) return;
+  if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
 
   if (navigator.vibrate && vibrationEnabled){
     try { navigator.vibrate(20); } catch(e) {}
