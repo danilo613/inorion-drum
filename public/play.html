@@ -538,6 +538,60 @@
     letter-spacing:0.04em;
   }
 
+  .onlineModeRow{ cursor:default; }
+  .pillSwitch{
+    position:relative;
+    display:inline-block;
+    width:34px;
+    height:19px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .pillSwitch input{
+    position:absolute;
+    opacity:0;
+    width:100%;
+    height:100%;
+    margin:0;
+    cursor:pointer;
+  }
+  .pillSwitchTrack{
+    position:absolute;
+    inset:0;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(201,162,76,0.35);
+    border-radius:999px;
+    transition:background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .pillSwitchKnob{
+    position:absolute;
+    top:2px; left:2px;
+    width:13px; height:13px;
+    border-radius:50%;
+    background:var(--ink-dim);
+    transition:transform 0.25s ease, background 0.25s ease;
+  }
+  .pillSwitch input:checked + .pillSwitchTrack{
+    background:rgba(74,222,128,0.22);
+    border-color:rgba(74,222,128,0.75);
+    box-shadow:0 0 10px rgba(74,222,128,0.55);
+  }
+  .pillSwitch input:checked + .pillSwitchTrack .pillSwitchKnob{
+    transform:translateX(15px);
+    background:#4ade80;
+    box-shadow:0 0 6px rgba(74,222,128,0.9);
+  }
+  .onlineGlobe{
+    font-size:13px;
+    opacity:0.35;
+    filter:grayscale(1);
+    transition:opacity 0.25s ease, filter 0.25s ease;
+  }
+  .onlineModeRow.onlineOn .onlineGlobe{
+    opacity:1;
+    filter:grayscale(0);
+  }
+
   .bgmPanel{
     display:flex;
     flex-direction:column;
@@ -720,11 +774,13 @@
         <span data-i18n="noteLabelToggle">打面にスケールを表示</span>
       </label>
     </div>
-    <div class="noteToggleRow">
-      <label>
+    <div class="noteToggleRow onlineModeRow">
+      <label class="pillSwitch">
         <input type="checkbox" id="onlineModeToggle">
-        <span data-i18n="onlineModeToggle">オンラインセッションモード</span>
+        <span class="pillSwitchTrack"><span class="pillSwitchKnob"></span></span>
       </label>
+      <span data-i18n="onlineModeToggle">オンラインセッションモード</span>
+      <span class="onlineGlobe" id="onlineGlobe">🌏</span>
     </div>
     <div class="onlinePresence hidden" id="onlinePresence">
       <span id="onlinePresenceCount">0</span><span data-i18n="onlinePresenceSuffix">人が演奏中</span>
@@ -1062,11 +1118,24 @@ function subscribeToScalePresence(scale){
   presenceChannel.bind('pusher:subscription_succeeded', updatePresenceCount);
   presenceChannel.bind('pusher:member_added', updatePresenceCount);
   presenceChannel.bind('pusher:member_removed', updatePresenceCount);
+  presenceChannel.bind('client-play', (data) => {
+    if (!data || !data.color) return;
+    playColorRemote(data.color, Math.min(1, Math.max(0, data.velocity || 0.6)));
+  });
+}
+
+// 自分のタップを、同じ部屋(同じ音階・オンラインモードON同士)にいる全員へ送る。
+// client event はサーバーを経由せず直接他の参加者に届くので低遅延。
+function broadcastPlay(color, velocity){
+  if (!onlineModeOn || !presenceChannel || !presenceChannel.subscribed) return;
+  presenceChannel.trigger('client-play', { color, velocity });
 }
 
 function setOnlineMode(on){
   onlineModeOn = on;
   const box = document.getElementById('onlinePresence');
+  const row = document.querySelector('.onlineModeRow');
+  if (row) row.classList.toggle('onlineOn', on);
   if (!on){
     if (pusherClient){
       pusherClient.disconnect();
@@ -1440,6 +1509,30 @@ function playColor(color, el, pressure){
   triggerRippleAt(el.style.left, el.style.top, velocity);
   triggerParticlesAt(el.style.left, el.style.top, velocity);
   chargeAura(velocity);
+
+  broadcastPlay(color, velocity);
+}
+
+// リモート(他の演奏者)からのタップを再生する。自分のタップと違い、
+// バイブレーションは鳴らさず、再送信(broadcastPlay)もしない。
+function playColorRemote(color, velocity){
+  if (!ctx || !buffers[currentScale] || !buffers[currentScale][color]) return;
+  if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
+
+  const src = ctx.createBufferSource();
+  src.buffer = buffers[currentScale][color];
+  const scaleGain = ctx.createGain();
+  scaleGain.gain.value = (SCALE_GAIN[currentScale] || 1.0) * velocity;
+  src.connect(scaleGain);
+  scaleGain.connect(eqLow);
+  src.start(0);
+
+  const zone = document.querySelector('.zone[data-color="' + color + '"]');
+  if (zone){
+    triggerRippleAt(zone.style.left, zone.style.top, velocity);
+    triggerParticlesAt(zone.style.left, zone.style.top, velocity);
+    chargeAura(velocity * 0.7);
+  }
 }
 
 function playAttack(pressure){
