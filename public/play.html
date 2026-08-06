@@ -128,6 +128,23 @@
     word-break:break-all;
   }
 
+  .globalPresence{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    text-align:center;
+    margin:0 auto 16px;
+    font-size:12px;
+    color:#4ade80;
+    letter-spacing:0.04em;
+  }
+  .globalPresence .onlineGlobe{
+    opacity:1;
+    filter:none;
+    font-size:13px;
+  }
+
   .disc-stage{
     position:relative;
     width:min(88vw, 400px);
@@ -755,6 +772,18 @@
     </div>
   </div>
 
+  <div class="aboutBox">
+    <button class="aboutToggle" id="onlineAboutToggle" data-i18n="onlineAboutToggle">オンラインセッションモードとは？</button>
+    <div class="aboutBody hidden" id="onlineAboutBody">
+      <p data-i18n="onlineAboutText">同じ瞬間に、同じ音階を選んだ誰かと、音が響き合う機能です。<br>自分の打った音が相手に届き、相手の音もこちらに聞こえてきます。<br><br>大切にしたいのは、優しさと余韻。<br>一音ずつ、音と音の間（ま）を感じながら奏でてみてください。<br>連打や強い音を無闇に鳴らすと、その場の雰囲気を壊してしまいます。<br><br>顔も名前もわからない誰かと、そっと繋がっている——<br>そんなやわらかな気配を楽しむための機能です。</p>
+    </div>
+  </div>
+
+  <div class="globalPresence hidden" id="globalPresence">
+    <span class="onlineGlobe" id="globalPresenceGlobe">🌏</span>
+    <span data-i18n="onlinePresencePrefix">現在</span><span id="globalPresenceScaleName"></span><span data-i18n="onlinePresenceDe">で</span><span id="globalPresenceCount">0</span><span data-i18n="onlinePresenceSuffix">人がプレイ中</span>
+  </div>
+
   <div class="scaleSwitch" id="scaleSwitch"></div>
 
   <div class="rotateRow">
@@ -1101,6 +1130,7 @@ function updateScaleInfo(){
   }
   updateZoneNoteLabels();
   if (typeof onlineModeOn !== 'undefined' && onlineModeOn) subscribeToScalePresence(currentScale);
+  if (typeof renderGlobalPresence === 'function') renderGlobalPresence();
 }
 
 document.getElementById('noteLabelToggle').addEventListener('change', (e) => {
@@ -1122,16 +1152,6 @@ function updatePresenceCount(){
   const meta = SCALES[currentScale];
   if (nameEl && meta) nameEl.textContent = meta.ja;
   if (countEl) countEl.textContent = presenceChannel && presenceChannel.members ? presenceChannel.members.count : 0;
-  updateScaleBadge();
-}
-
-function updateScaleBadge(){
-  const count = presenceChannel && presenceChannel.members ? presenceChannel.members.count : 0;
-  const online = onlineModeOn && count > 0;
-  document.querySelectorAll('.scaleBtn').forEach(btn => {
-    const isCurrent = btn.dataset.scaleKey === currentScale;
-    btn.classList.toggle('scaleOnline', isCurrent && online);
-  });
 }
 
 function subscribeToScalePresence(scale){
@@ -1151,10 +1171,18 @@ function subscribeToScalePresence(scale){
   });
 }
 
+// 荒らし対策: 連打やスクリプトからの過剰送信で他の参加者の体験を壊さないよう、
+// 送信間隔に下限を設ける(自分の耳には毎回聞こえるが、他の人に届くのは間引かれる)。
+let lastBroadcastAt = 0;
+const BROADCAST_MIN_INTERVAL_MS = 150;
+
 // 自分のタップを、同じ部屋(同じ音階・オンラインモードON同士)にいる全員へ送る。
 // client event はサーバーを経由せず直接他の参加者に届くので低遅延。
 function broadcastPlay(color, velocity){
   if (!onlineModeOn || !presenceChannel || !presenceChannel.subscribed) return;
+  const now = Date.now();
+  if (now - lastBroadcastAt < BROADCAST_MIN_INTERVAL_MS) return;
+  lastBroadcastAt = now;
   presenceChannel.trigger('client-play', { color, velocity });
 }
 
@@ -1170,7 +1198,6 @@ function setOnlineMode(on){
       presenceChannel = null;
     }
     if (box) box.classList.add('hidden');
-    updateScaleBadge();
     return;
   }
   if (!pusherClient){
@@ -1189,6 +1216,42 @@ function setOnlineMode(on){
 document.getElementById('onlineModeToggle').addEventListener('change', (e) => {
   setOnlineMode(e.target.checked);
 });
+
+// ---- 常時表示の在室状況(トグルOFFの人にも見える。読み取り専用のポーリング) ----
+const scalePollCounts = { arcane: 0, enigma: 0, equinox: 0, tonus: 0 };
+
+function renderGlobalPresence(){
+  const meta = SCALES[currentScale];
+  const count = scalePollCounts[currentScale] || 0;
+  const nameEl = document.getElementById('globalPresenceScaleName');
+  const countEl = document.getElementById('globalPresenceCount');
+  if (nameEl && meta) nameEl.textContent = meta.ja;
+  if (countEl) countEl.textContent = count;
+
+  document.querySelectorAll('.scaleBtn').forEach(btn => {
+    const key = btn.dataset.scaleKey;
+    if (!key) return;
+    btn.classList.toggle('scaleOnline', (scalePollCounts[key] || 0) > 0);
+  });
+}
+
+async function pollScalePresence(){
+  try {
+    const res = await fetch('/api/scale-presence');
+    if (!res.ok) return;
+    const body = await res.json();
+    if (body && body.counts){
+      Object.assign(scalePollCounts, body.counts);
+      renderGlobalPresence();
+    }
+  } catch (e) {
+    // ネットワーク不調時は次の周期を待つだけで良い
+  }
+}
+
+document.getElementById('globalPresence').classList.remove('hidden');
+pollScalePresence();
+setInterval(pollScalePresence, 8000);
 
 function base64ToArrayBuffer(b64){
   const binary = atob(b64);
@@ -1765,6 +1828,11 @@ const TEXTS = {
     ja: "日本のGUDAdrum第一人者のDANiLOが開発した<br>バーチャルのスリットドラム。<br>グーダドラムの音色をベースに作られています。<br>誰でも気軽に、癒しの音色が楽しめるツール。<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>生で演奏を堪能するなら、2026年10月17日（土）神戸ラピスホールで特別公演があります↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br>遠方の方でも楽しめる、カメラを数台用いたこだわりのライブ配信もあります♪<br><br><a href=\"https://www.tunecore.co.jp/artists/DANiLO?artistPagePath=DANiLO&lang=en\" target=\"_blank\" rel=\"noopener\">オンラインでDANiLOの楽曲を視聴する</a><br><br>DANiLO instagram：<a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a><br>DANiLO TikTok：<a href=\"https://www.tiktok.com/@sacredsound.japan?_r=1&_t=ZS-98akeyB4qk3\" target=\"_blank\" rel=\"noopener\">@sacredsound.japan</a><br><br>グーダドラム購入、演奏指導、アプリ開発のお問い合わせ＆依頼はこちら<br>Email：<a href=\"mailto:danilo@starseeds.me\">danilo@starseeds.me</a>",
     en: "A virtual slit drum created by DANiLO,<br>Japan's leading GUDAdrum artist.<br>It's built around the tonal character of the actual GUDAdrum.<br>A tool for anyone to enjoy its healing tones.<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>To experience it live, a special concert takes place in Kobe, Japan on October 17, 2026 (Sat) ↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br>A carefully produced multi-camera live stream will also be available, so those further away can enjoy it too ♪<br><br><a href=\"https://www.tunecore.co.jp/artists/DANiLO?artistPagePath=DANiLO&lang=en\" target=\"_blank\" rel=\"noopener\">Listen to the music online</a><br><br>DANiLO Instagram: <a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a><br>DANiLO TikTok: <a href=\"https://www.tiktok.com/@sacredsound.japan?_r=1&_t=ZS-98akeyB4qk3\" target=\"_blank\" rel=\"noopener\">@sacredsound.japan</a><br><br>For inquiries and requests about purchasing a GUDAdrum, drum lessons, or app development:<br>Email: <a href=\"mailto:danilo@starseeds.me\">danilo@starseeds.me</a>"
   },
+  onlineAboutToggle: { ja: "オンラインセッションモードとは？", en: "What is online session mode?" },
+  onlineAboutText: {
+    ja: "同じ瞬間に、同じ音階を選んだ誰かと、音が響き合う機能です。<br>自分の打った音が相手に届き、相手の音もこちらに聞こえてきます。<br><br>大切にしたいのは、優しさと余韻。<br>一音ずつ、音と音の間（ま）を感じながら奏でてみてください。<br>連打や強い音を無闇に鳴らすと、その場の雰囲気を壊してしまいます。<br><br>顔も名前もわからない誰かと、そっと繋がっている——<br>そんなやわらかな気配を楽しむための機能です。",
+    en: "A feature that lets your tones reach anyone who has chosen the same scale as you, at the same moment.<br>Your sound reaches them, and theirs reaches you.<br><br>What matters most here is gentleness and lingering resonance.<br>Play one note at a time, and feel the space between the sounds.<br>Rapid or forceful tapping can break the shared atmosphere.<br><br>A quiet connection with someone whose face and name you'll never know —<br>this feature exists to let you enjoy that gentle presence."
+  },
   noteLabelToggle: { ja: "打面にスケールを表示", en: "Show notes on the drum" },
   unlockBtn: { ja: "タップして音を鳴らす", en: "Tap to begin" },
   unlockSub: { ja: "Tap to begin", en: "祈りの音、鳴らす" },
@@ -1800,7 +1868,7 @@ const TEXTS = {
     en: "The center is the root tone (pink). Tap the eight<br>surrounding tone fields to play different pitches."
   },
 };
-const HTML_KEYS = ['hintMain', 'aboutText'];
+const HTML_KEYS = ['hintMain', 'aboutText', 'onlineAboutText'];
 
 function applyLang(lang){
   currentLang = lang;
@@ -1864,6 +1932,10 @@ bindRotButton(document.getElementById('rotNext'), 1);
 
 document.getElementById('aboutToggle').addEventListener('click', () => {
   document.getElementById('aboutBody').classList.toggle('hidden');
+});
+
+document.getElementById('onlineAboutToggle').addEventListener('click', () => {
+  document.getElementById('onlineAboutBody').classList.toggle('hidden');
 });
 
 function wrapSliders(){
