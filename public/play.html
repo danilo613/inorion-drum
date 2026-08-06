@@ -489,6 +489,22 @@
     opacity:0.35;
     cursor:default;
   }
+  .scaleGlobe{
+    display:none;
+    font-size:10px;
+    margin-right:3px;
+    vertical-align:middle;
+  }
+  .scaleBtn.scaleOnline{
+    border-color:rgba(74,222,128,0.75);
+    box-shadow:0 0 9px rgba(74,222,128,0.55);
+  }
+  .scaleBtn.scaleOnline.active{
+    box-shadow:0 0 0 1px rgba(242,212,136,0.35), 0 4px 14px rgba(201,162,76,0.35), 0 0 10px rgba(74,222,128,0.6);
+  }
+  .scaleBtn.scaleOnline .scaleGlobe{
+    display:inline;
+  }
 
   .scaleInfo{
     display:flex;
@@ -1084,7 +1100,7 @@ function updateScaleInfo(){
     notesEl.textContent = [notes.pink, notes.orange, notes.lime, notes.green, notes.red, notes.purple, notes.brown, notes.yellow, notes.cyan].join(' - ');
   }
   updateZoneNoteLabels();
-  if (typeof onlineModeOn !== 'undefined' && onlineModeOn) subscribeToScalePresence(currentScale);
+  if (typeof onlineModeOn !== 'undefined' && onlineModeOn) updatePresenceCount();
 }
 
 document.getElementById('noteLabelToggle').addEventListener('change', (e) => {
@@ -1093,42 +1109,70 @@ document.getElementById('noteLabelToggle').addEventListener('change', (e) => {
   if (stage) stage.classList.toggle('show-notes', showNotesOnDisc);
 });
 
-// ---- online session mode (Step 1: presence count per scale only) ----
+// ---- online session mode (Step 2: presence per scale + live tap broadcast) ----
 const PUSHER_KEY = '5af11c1071a586b5404d';
 const PUSHER_CLUSTER = 'ap3';
+const ONLINE_SCALE_KEYS = ['arcane', 'enigma', 'equinox', 'tonus'];
 let pusherClient = null;
-let presenceChannel = null;
 let onlineModeOn = false;
+const presenceChannels = {};
+const presenceCounts = { arcane: 0, enigma: 0, equinox: 0, tonus: 0 };
 
 function updatePresenceCount(){
   const el = document.getElementById('onlinePresenceCount');
-  if (el && presenceChannel){
-    el.textContent = presenceChannel.members.count;
-  }
+  if (el) el.textContent = presenceCounts[currentScale] || 0;
 }
 
-function subscribeToScalePresence(scale){
-  if (!pusherClient) return;
-  if (presenceChannel){
-    pusherClient.unsubscribe(presenceChannel.name);
-    presenceChannel = null;
-  }
-  const channelName = 'presence-scale-' + scale;
-  presenceChannel = pusherClient.subscribe(channelName);
-  presenceChannel.bind('pusher:subscription_succeeded', updatePresenceCount);
-  presenceChannel.bind('pusher:member_added', updatePresenceCount);
-  presenceChannel.bind('pusher:member_removed', updatePresenceCount);
-  presenceChannel.bind('client-play', (data) => {
-    if (!data || !data.color) return;
-    playColorRemote(data.color, Math.min(1, Math.max(0, data.velocity || 0.6)));
+function updateScaleBadges(){
+  document.querySelectorAll('.scaleBtn').forEach(btn => {
+    const key = btn.dataset.scaleKey;
+    if (!key) return;
+    const online = onlineModeOn && (presenceCounts[key] || 0) > 0;
+    btn.classList.toggle('scaleOnline', online);
   });
+}
+
+function subscribeAllScalePresence(){
+  ONLINE_SCALE_KEYS.forEach(key => {
+    if (!pusherClient || presenceChannels[key]) return;
+    const ch = pusherClient.subscribe('presence-scale-' + key);
+    presenceChannels[key] = ch;
+
+    const refreshCount = () => {
+      presenceCounts[key] = ch.members ? ch.members.count : 0;
+      updateScaleBadges();
+      if (key === currentScale) updatePresenceCount();
+    };
+    ch.bind('pusher:subscription_succeeded', refreshCount);
+    ch.bind('pusher:member_added', refreshCount);
+    ch.bind('pusher:member_removed', refreshCount);
+
+    ch.bind('client-play', (data) => {
+      if (key !== currentScale) return; // 今見てる音階以外は音を鳴らさない
+      if (!data || !data.color) return;
+      playColorRemote(data.color, Math.min(1, Math.max(0, data.velocity || 0.6)));
+    });
+  });
+}
+
+function unsubscribeAllScalePresence(){
+  ONLINE_SCALE_KEYS.forEach(key => {
+    if (pusherClient && presenceChannels[key]){
+      pusherClient.unsubscribe(presenceChannels[key].name);
+    }
+    delete presenceChannels[key];
+    presenceCounts[key] = 0;
+  });
+  updateScaleBadges();
 }
 
 // 自分のタップを、同じ部屋(同じ音階・オンラインモードON同士)にいる全員へ送る。
 // client event はサーバーを経由せず直接他の参加者に届くので低遅延。
 function broadcastPlay(color, velocity){
-  if (!onlineModeOn || !presenceChannel || !presenceChannel.subscribed) return;
-  presenceChannel.trigger('client-play', { color, velocity });
+  if (!onlineModeOn) return;
+  const ch = presenceChannels[currentScale];
+  if (!ch || !ch.subscribed) return;
+  ch.trigger('client-play', { color, velocity });
 }
 
 function setOnlineMode(on){
@@ -1137,10 +1181,10 @@ function setOnlineMode(on){
   const row = document.querySelector('.onlineModeRow');
   if (row) row.classList.toggle('onlineOn', on);
   if (!on){
+    unsubscribeAllScalePresence();
     if (pusherClient){
       pusherClient.disconnect();
       pusherClient = null;
-      presenceChannel = null;
     }
     if (box) box.classList.add('hidden');
     return;
@@ -1154,7 +1198,8 @@ function setOnlineMode(on){
       },
     });
   }
-  subscribeToScalePresence(currentScale);
+  subscribeAllScalePresence();
+  updatePresenceCount();
   if (box) box.classList.remove('hidden');
 }
 
@@ -1797,8 +1842,9 @@ function buildScaleSwitch(){
   Object.entries(SCALES).forEach(([key, meta]) => {
     const btn = document.createElement('button');
     btn.className = 'scaleBtn' + (key === currentScale ? ' active' : '');
+    btn.dataset.scaleKey = key;
     btn.disabled = !meta.enabled;
-    btn.innerHTML = `${meta.ja}<span class="en">${meta.en}</span>`;
+    btn.innerHTML = `<span class="scaleGlobe">🌏</span>${meta.ja}<span class="en">${meta.en}</span>`;
     if (meta.enabled){
       btn.addEventListener('click', () => {
         currentScale = key;
