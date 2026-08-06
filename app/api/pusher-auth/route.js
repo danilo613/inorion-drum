@@ -4,12 +4,17 @@ import Pusher from 'pusher';
 // このエンドポイントは Pusher の presence チャンネル(「今このチャンネルに誰がいるか」を
 // 教えてくれる仕組み)を使うために必須の認証窓口。app_id と secret はここでしか使わない
 // (ブラウザ側のコードには一切書かない)。
+// key と cluster は公開情報(ブラウザ側の play.html にも同じ値を直書きしている)なので、
+// ここでは環境変数を増やさずリテラルで持たせる。
+
+const PUSHER_KEY = '5af11c1071a586b5404d';
+const PUSHER_CLUSTER = 'ap3';
 
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID,
-  key: process.env.PUSHER_KEY,
+  key: PUSHER_KEY,
   secret: process.env.PUSHER_SECRET,
-  cluster: process.env.PUSHER_CLUSTER,
+  cluster: PUSHER_CLUSTER,
   useTLS: true,
 });
 
