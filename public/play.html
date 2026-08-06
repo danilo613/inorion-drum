@@ -790,6 +790,9 @@
         <span data-i18n="noteLabelToggle">打面にスケールを表示</span>
       </label>
     </div>
+    <div class="onlinePresence hidden" id="onlinePresence">
+      <span data-i18n="onlinePresencePrefix">現在</span><span id="onlinePresenceScaleName"></span><span data-i18n="onlinePresenceDe">で</span><span id="onlinePresenceCount">0</span><span data-i18n="onlinePresenceSuffix">人がプレイ中</span>
+    </div>
     <div class="noteToggleRow onlineModeRow">
       <label class="pillSwitch">
         <input type="checkbox" id="onlineModeToggle">
@@ -797,9 +800,6 @@
       </label>
       <span data-i18n="onlineModeToggle">オンラインセッションモード</span>
       <span class="onlineGlobe" id="onlineGlobe">🌏</span>
-    </div>
-    <div class="onlinePresence hidden" id="onlinePresence">
-      <span id="onlinePresenceCount">0</span><span data-i18n="onlinePresenceSuffix">人が演奏中</span>
     </div>
   </div>
 
@@ -1100,7 +1100,7 @@ function updateScaleInfo(){
     notesEl.textContent = [notes.pink, notes.orange, notes.lime, notes.green, notes.red, notes.purple, notes.brown, notes.yellow, notes.cyan].join(' - ');
   }
   updateZoneNoteLabels();
-  if (typeof onlineModeOn !== 'undefined' && onlineModeOn) updatePresenceCount();
+  if (typeof onlineModeOn !== 'undefined' && onlineModeOn) subscribeToScalePresence(currentScale);
 }
 
 document.getElementById('noteLabelToggle').addEventListener('change', (e) => {
@@ -1109,70 +1109,53 @@ document.getElementById('noteLabelToggle').addEventListener('change', (e) => {
   if (stage) stage.classList.toggle('show-notes', showNotesOnDisc);
 });
 
-// ---- online session mode (Step 2: presence per scale + live tap broadcast) ----
+// ---- online session mode (single active scale: presence + live tap broadcast) ----
 const PUSHER_KEY = '5af11c1071a586b5404d';
 const PUSHER_CLUSTER = 'ap3';
-const ONLINE_SCALE_KEYS = ['arcane', 'enigma', 'equinox', 'tonus'];
 let pusherClient = null;
 let onlineModeOn = false;
-const presenceChannels = {};
-const presenceCounts = { arcane: 0, enigma: 0, equinox: 0, tonus: 0 };
+let presenceChannel = null;
 
 function updatePresenceCount(){
-  const el = document.getElementById('onlinePresenceCount');
-  if (el) el.textContent = presenceCounts[currentScale] || 0;
+  const nameEl = document.getElementById('onlinePresenceScaleName');
+  const countEl = document.getElementById('onlinePresenceCount');
+  const meta = SCALES[currentScale];
+  if (nameEl && meta) nameEl.textContent = meta.ja;
+  if (countEl) countEl.textContent = presenceChannel && presenceChannel.members ? presenceChannel.members.count : 0;
+  updateScaleBadge();
 }
 
-function updateScaleBadges(){
+function updateScaleBadge(){
+  const count = presenceChannel && presenceChannel.members ? presenceChannel.members.count : 0;
+  const online = onlineModeOn && count > 0;
   document.querySelectorAll('.scaleBtn').forEach(btn => {
-    const key = btn.dataset.scaleKey;
-    if (!key) return;
-    const online = onlineModeOn && (presenceCounts[key] || 0) > 0;
-    btn.classList.toggle('scaleOnline', online);
+    const isCurrent = btn.dataset.scaleKey === currentScale;
+    btn.classList.toggle('scaleOnline', isCurrent && online);
   });
 }
 
-function subscribeAllScalePresence(){
-  ONLINE_SCALE_KEYS.forEach(key => {
-    if (!pusherClient || presenceChannels[key]) return;
-    const ch = pusherClient.subscribe('presence-scale-' + key);
-    presenceChannels[key] = ch;
-
-    const refreshCount = () => {
-      presenceCounts[key] = ch.members ? ch.members.count : 0;
-      updateScaleBadges();
-      if (key === currentScale) updatePresenceCount();
-    };
-    ch.bind('pusher:subscription_succeeded', refreshCount);
-    ch.bind('pusher:member_added', refreshCount);
-    ch.bind('pusher:member_removed', refreshCount);
-
-    ch.bind('client-play', (data) => {
-      if (key !== currentScale) return; // 今見てる音階以外は音を鳴らさない
-      if (!data || !data.color) return;
-      playColorRemote(data.color, Math.min(1, Math.max(0, data.velocity || 0.6)));
-    });
+function subscribeToScalePresence(scale){
+  if (!pusherClient) return;
+  if (presenceChannel){
+    pusherClient.unsubscribe(presenceChannel.name);
+    presenceChannel = null;
+  }
+  const ch = pusherClient.subscribe('presence-scale-' + scale);
+  presenceChannel = ch;
+  ch.bind('pusher:subscription_succeeded', updatePresenceCount);
+  ch.bind('pusher:member_added', updatePresenceCount);
+  ch.bind('pusher:member_removed', updatePresenceCount);
+  ch.bind('client-play', (data) => {
+    if (!data || !data.color) return;
+    playColorRemote(data.color, Math.min(1, Math.max(0, data.velocity || 0.6)));
   });
-}
-
-function unsubscribeAllScalePresence(){
-  ONLINE_SCALE_KEYS.forEach(key => {
-    if (pusherClient && presenceChannels[key]){
-      pusherClient.unsubscribe(presenceChannels[key].name);
-    }
-    delete presenceChannels[key];
-    presenceCounts[key] = 0;
-  });
-  updateScaleBadges();
 }
 
 // 自分のタップを、同じ部屋(同じ音階・オンラインモードON同士)にいる全員へ送る。
 // client event はサーバーを経由せず直接他の参加者に届くので低遅延。
 function broadcastPlay(color, velocity){
-  if (!onlineModeOn) return;
-  const ch = presenceChannels[currentScale];
-  if (!ch || !ch.subscribed) return;
-  ch.trigger('client-play', { color, velocity });
+  if (!onlineModeOn || !presenceChannel || !presenceChannel.subscribed) return;
+  presenceChannel.trigger('client-play', { color, velocity });
 }
 
 function setOnlineMode(on){
@@ -1181,12 +1164,13 @@ function setOnlineMode(on){
   const row = document.querySelector('.onlineModeRow');
   if (row) row.classList.toggle('onlineOn', on);
   if (!on){
-    unsubscribeAllScalePresence();
     if (pusherClient){
       pusherClient.disconnect();
       pusherClient = null;
+      presenceChannel = null;
     }
     if (box) box.classList.add('hidden');
+    updateScaleBadge();
     return;
   }
   if (!pusherClient){
@@ -1198,8 +1182,7 @@ function setOnlineMode(on){
       },
     });
   }
-  subscribeAllScalePresence();
-  updatePresenceCount();
+  subscribeToScalePresence(currentScale);
   if (box) box.classList.remove('hidden');
 }
 
@@ -1773,6 +1756,10 @@ let currentLang = 'ja';
 const TEXTS = {
   sub: { ja: "打面に触れて、祈りの音を鳴らす", en: "Touch the tone fields, awaken the resonance" },
   subNote: { ja: "イヤフォン、ヘッドフォン推奨", en: "Headphones recommended" },
+  onlineModeToggle: { ja: "オンラインセッションモード", en: "Online session mode" },
+  onlinePresencePrefix: { ja: "現在", en: "Currently " },
+  onlinePresenceDe: { ja: "で", en: " — " },
+  onlinePresenceSuffix: { ja: "人がプレイ中", en: " playing" },
   aboutToggle: { ja: "Inorion DRUMとは？", en: "What is Inorion DRUM?" },
   aboutText: {
     ja: "日本のGUDAdrum第一人者のDANiLOが開発した<br>バーチャルのスリットドラム。<br>グーダドラムの音色をベースに作られています。<br>誰でも気軽に、癒しの音色が楽しめるツール。<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>生で演奏を堪能するなら、2026年10月17日（土）神戸ラピスホールで特別公演があります↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br>遠方の方でも楽しめる、カメラを数台用いたこだわりのライブ配信もあります♪<br><br><a href=\"https://www.tunecore.co.jp/artists/DANiLO?artistPagePath=DANiLO&lang=en\" target=\"_blank\" rel=\"noopener\">オンラインでDANiLOの楽曲を視聴する</a><br><br>DANiLO instagram：<a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a><br>DANiLO TikTok：<a href=\"https://www.tiktok.com/@sacredsound.japan?_r=1&_t=ZS-98akeyB4qk3\" target=\"_blank\" rel=\"noopener\">@sacredsound.japan</a><br><br>グーダドラム購入、演奏指導、アプリ開発のお問い合わせ＆依頼はこちら<br>Email：<a href=\"mailto:danilo@starseeds.me\">danilo@starseeds.me</a>",
