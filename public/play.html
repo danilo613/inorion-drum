@@ -530,6 +530,13 @@
     accent-color:var(--gold-bright, #f2d488);
     cursor:pointer;
   }
+  .onlinePresence{
+    text-align:center;
+    margin-top:6px;
+    font-size:12px;
+    color:var(--gold-bright);
+    letter-spacing:0.04em;
+  }
 
   .bgmPanel{
     display:flex;
@@ -713,6 +720,15 @@
         <span data-i18n="noteLabelToggle">打面にスケールを表示</span>
       </label>
     </div>
+    <div class="noteToggleRow">
+      <label>
+        <input type="checkbox" id="onlineModeToggle">
+        <span data-i18n="onlineModeToggle">オンラインセッションモード</span>
+      </label>
+    </div>
+    <div class="onlinePresence hidden" id="onlinePresence">
+      <span id="onlinePresenceCount">0</span><span data-i18n="onlinePresenceSuffix">人が演奏中</span>
+    </div>
   </div>
 
   <div class="bgmPanel">
@@ -843,6 +859,7 @@
 
 </div>
 
+<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
 <script>
 // 来訪ログ(国別カウント)。失敗しても本体の体験には影響させない。
 // 自分の端末を集計から除外したい場合: ?owner=1 を付けたURLで一度だけアクセスすると、
@@ -1011,12 +1028,69 @@ function updateScaleInfo(){
     notesEl.textContent = [notes.pink, notes.orange, notes.lime, notes.green, notes.red, notes.purple, notes.brown, notes.yellow, notes.cyan].join(' - ');
   }
   updateZoneNoteLabels();
+  if (typeof onlineModeOn !== 'undefined' && onlineModeOn) subscribeToScalePresence(currentScale);
 }
 
 document.getElementById('noteLabelToggle').addEventListener('change', (e) => {
   showNotesOnDisc = e.target.checked;
   const stage = document.querySelector('.disc-stage');
   if (stage) stage.classList.toggle('show-notes', showNotesOnDisc);
+});
+
+// ---- online session mode (Step 1: presence count per scale only) ----
+const PUSHER_KEY = '5af11c1071a586b5404d';
+const PUSHER_CLUSTER = 'ap3';
+let pusherClient = null;
+let presenceChannel = null;
+let onlineModeOn = false;
+
+function updatePresenceCount(){
+  const el = document.getElementById('onlinePresenceCount');
+  if (el && presenceChannel){
+    el.textContent = presenceChannel.members.count;
+  }
+}
+
+function subscribeToScalePresence(scale){
+  if (!pusherClient) return;
+  if (presenceChannel){
+    pusherClient.unsubscribe(presenceChannel.name);
+    presenceChannel = null;
+  }
+  const channelName = 'presence-scale-' + scale;
+  presenceChannel = pusherClient.subscribe(channelName);
+  presenceChannel.bind('pusher:subscription_succeeded', updatePresenceCount);
+  presenceChannel.bind('pusher:member_added', updatePresenceCount);
+  presenceChannel.bind('pusher:member_removed', updatePresenceCount);
+}
+
+function setOnlineMode(on){
+  onlineModeOn = on;
+  const box = document.getElementById('onlinePresence');
+  if (!on){
+    if (pusherClient){
+      pusherClient.disconnect();
+      pusherClient = null;
+      presenceChannel = null;
+    }
+    if (box) box.classList.add('hidden');
+    return;
+  }
+  if (!pusherClient){
+    pusherClient = new Pusher(PUSHER_KEY, {
+      cluster: PUSHER_CLUSTER,
+      channelAuthorization: {
+        endpoint: '/api/pusher-auth',
+        transport: 'ajax',
+      },
+    });
+  }
+  subscribeToScalePresence(currentScale);
+  if (box) box.classList.remove('hidden');
+}
+
+document.getElementById('onlineModeToggle').addEventListener('change', (e) => {
+  setOnlineMode(e.target.checked);
 });
 
 function base64ToArrayBuffer(b64){
