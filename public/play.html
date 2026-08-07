@@ -136,13 +136,12 @@
     text-align:center;
     margin:0 auto 16px;
     font-size:12px;
-    color:#4ade80;
+    color:var(--ink-dim);
     letter-spacing:0.04em;
+    transition:color 0.25s ease;
   }
-  .globalPresence .onlineGlobe{
-    opacity:1;
-    filter:none;
-    font-size:13px;
+  .globalPresence.hasOnline{
+    color:#4ade80;
   }
 
   .disc-stage{
@@ -780,8 +779,16 @@
   </div>
 
   <div class="globalPresence hidden" id="globalPresence">
-    <span class="onlineGlobe" id="globalPresenceGlobe">🌏</span>
-    <span data-i18n="onlinePresencePrefix">現在</span><span id="globalPresenceScaleName"></span><span data-i18n="onlinePresenceDe">で</span><span id="globalPresenceCount">0</span><span data-i18n="onlinePresenceSuffix">人がプレイ中</span>
+    <span id="globalPresenceText"></span>
+  </div>
+
+  <div class="noteToggleRow onlineModeRow">
+    <label class="pillSwitch">
+      <input type="checkbox" id="onlineModeToggle">
+      <span class="pillSwitchTrack"><span class="pillSwitchKnob"></span></span>
+    </label>
+    <span data-i18n="onlineModeToggle">オンラインセッションモード</span>
+    <span class="onlineGlobe" id="onlineGlobe">🌏</span>
   </div>
 
   <div class="scaleSwitch" id="scaleSwitch"></div>
@@ -818,17 +825,6 @@
         <input type="checkbox" id="noteLabelToggle">
         <span data-i18n="noteLabelToggle">打面にスケールを表示</span>
       </label>
-    </div>
-    <div class="onlinePresence hidden" id="onlinePresence">
-      <span data-i18n="onlinePresencePrefix">現在</span><span id="onlinePresenceScaleName"></span><span data-i18n="onlinePresenceDe">で</span><span id="onlinePresenceCount">0</span><span data-i18n="onlinePresenceSuffix">人がプレイ中</span>
-    </div>
-    <div class="noteToggleRow onlineModeRow">
-      <label class="pillSwitch">
-        <input type="checkbox" id="onlineModeToggle">
-        <span class="pillSwitchTrack"><span class="pillSwitchKnob"></span></span>
-      </label>
-      <span data-i18n="onlineModeToggle">オンラインセッションモード</span>
-      <span class="onlineGlobe" id="onlineGlobe">🌏</span>
     </div>
   </div>
 
@@ -1147,11 +1143,10 @@ let onlineModeOn = false;
 let presenceChannel = null;
 
 function updatePresenceCount(){
-  const nameEl = document.getElementById('onlinePresenceScaleName');
-  const countEl = document.getElementById('onlinePresenceCount');
-  const meta = SCALES[currentScale];
-  if (nameEl && meta) nameEl.textContent = meta.ja;
-  if (countEl) countEl.textContent = presenceChannel && presenceChannel.members ? presenceChannel.members.count : 0;
+  if (presenceChannel && presenceChannel.members){
+    scalePollCounts[currentScale] = presenceChannel.members.count;
+  }
+  renderGlobalPresence();
 }
 
 function subscribeToScalePresence(scale){
@@ -1223,10 +1218,21 @@ const scalePollCounts = { arcane: 0, enigma: 0, equinox: 0, tonus: 0 };
 function renderGlobalPresence(){
   const meta = SCALES[currentScale];
   const count = scalePollCounts[currentScale] || 0;
-  const nameEl = document.getElementById('globalPresenceScaleName');
-  const countEl = document.getElementById('globalPresenceCount');
-  if (nameEl && meta) nameEl.textContent = meta.ja;
-  if (countEl) countEl.textContent = count;
+  const textEl = document.getElementById('globalPresenceText');
+  const boxEl = document.getElementById('globalPresence');
+  if (boxEl) boxEl.classList.toggle('hasOnline', count > 0);
+  if (textEl){
+    if (count > 0 && meta){
+      const scaleName = currentLang === 'en' ? meta.en : meta.ja;
+      if (currentLang === 'en'){
+        textEl.textContent = '🌏 Currently ' + count + (count === 1 ? ' person is' : ' people are') + ' playing — ' + scaleName;
+      } else {
+        textEl.textContent = '🌏現在' + scaleName + 'で' + count + '人がプレイ中';
+      }
+    } else {
+      textEl.textContent = currentLang === 'en' ? 'No one is online right now' : 'オンラインの人はいません';
+    }
+  }
 
   document.querySelectorAll('.scaleBtn').forEach(btn => {
     const key = btn.dataset.scaleKey;
@@ -1820,9 +1826,6 @@ const TEXTS = {
   sub: { ja: "打面に触れて、祈りの音を鳴らす", en: "Touch the tone fields, awaken the resonance" },
   subNote: { ja: "イヤフォン、ヘッドフォン推奨", en: "Headphones recommended" },
   onlineModeToggle: { ja: "オンラインセッションモード", en: "Online session mode" },
-  onlinePresencePrefix: { ja: "現在", en: "Currently " },
-  onlinePresenceDe: { ja: "で", en: " — " },
-  onlinePresenceSuffix: { ja: "人がプレイ中", en: " playing" },
   aboutToggle: { ja: "Inorion DRUMとは？", en: "What is Inorion DRUM?" },
   aboutText: {
     ja: "日本のGUDAdrum第一人者のDANiLOが開発した<br>バーチャルのスリットドラム。<br>グーダドラムの音色をベースに作られています。<br>誰でも気軽に、癒しの音色が楽しめるツール。<br><a href=\"https://www.gudadrumjapan.com/\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/</a><br><br>生で演奏を堪能するなら、2026年10月17日（土）神戸ラピスホールで特別公演があります↓<br><a href=\"https://www.gudadrumjapan.com/1inorion\" target=\"_blank\" rel=\"noopener\">https://www.gudadrumjapan.com/1inorion</a><br>遠方の方でも楽しめる、カメラを数台用いたこだわりのライブ配信もあります♪<br><br><a href=\"https://www.tunecore.co.jp/artists/DANiLO?artistPagePath=DANiLO&lang=en\" target=\"_blank\" rel=\"noopener\">オンラインでDANiLOの楽曲を視聴する</a><br><br>DANiLO instagram：<a href=\"https://www.instagram.com/danilo.sacredjapan?igsh=MXZ3ZWNyb2oxOXJ4dg%3D%3D&utm_source=qr\" target=\"_blank\" rel=\"noopener\">@danilo.sacredjapan</a><br>DANiLO TikTok：<a href=\"https://www.tiktok.com/@sacredsound.japan?_r=1&_t=ZS-98akeyB4qk3\" target=\"_blank\" rel=\"noopener\">@sacredsound.japan</a><br><br>グーダドラム購入、演奏指導、アプリ開発のお問い合わせ＆依頼はこちら<br>Email：<a href=\"mailto:danilo@starseeds.me\">danilo@starseeds.me</a>",
@@ -1885,6 +1888,7 @@ function applyLang(lang){
   document.querySelectorAll('.langToggle button').forEach(b => {
     b.classList.toggle('active', b.dataset.lang === lang);
   });
+  if (typeof renderGlobalPresence === 'function') renderGlobalPresence();
 }
 
 document.querySelectorAll('.langToggle button').forEach(btn => {
